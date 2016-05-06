@@ -1,10 +1,23 @@
 <!DOCTYPE html>
+
 <html>
   <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
     <title>Simple Map</title>
-    <meta name="viewport" content="initial-scale=1.0">
+
     <script src='/socket.io/socket.io.js'></script>
     <meta charset="utf-8">
+
+    <link href="/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/bootstrap/dist/css/bootstrap-theme.min.css" rel="stylesheet">
+    <script src="/jquery/dist/jquery.min.js"></script>
+    <script src="/bootstrap/dist/js/bootstrap.min.js"></script>
+
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCVXj1vRXCYc3VIZtn0QsgcACaIdRhTIyU&callback=initMap"async defer></script>
+
     <style>
       html, body {
         height: 100%;
@@ -12,79 +25,139 @@
         padding: 0;
       }
       #map {
-        height: 50%;
-        width: 50%;
+        height: 75%;
+        width: 100%;
       }
       #screen {
         position: absolute;
         top: 0; right: 0; bottom: 0; left: 0;
       }
-    </style>
-  </head>
-  <body>
-    Lat: <input type="text" id="lat" value="-25.363">
-    <br />
-    Lon: <input type="text" id="lon" value="31.044">
-    <input type="submit" id="submit">
-    <br />
-    Light: <input type="submit" id="test" value="on">
 
-    <div id="map"></div>
+      /* Remove the navbar's default rounded borders and increase the bottom margin */ 
+      .navbar {
+        margin-bottom: 10px;
+        border-radius: 0;
+      }
+      
+      /* Remove the jumbotron's default bottom margin */ 
+       .jumbotron {
+        margin-bottom: 0;
+        padding-bottom: 10px;
+        padding-top: 10px;
+      }
+     
+      /* Add a gray background color and some padding to the footer */
+      footer {
+      background-color: #f2f2f2;
+        padding: 25px;
+      }
+    </style>
+
     <script>
       function initMap() {
-      var myLatLng = {lat: -25.363, lng: 31.044};
+        var myLatLng = {lat: -25.363, lng: 31.044};
 
-      var map = new google.maps.Map(document.getElementById('map'), {
-        zoom: 2,
-        center: myLatLng
-      });
+        var map = new google.maps.Map(document.getElementById('map'), {
+          zoom: 4,
+          center: myLatLng
+        });
 
-      var marker = new google.maps.Marker({
-        position: myLatLng,
-        map: map,
-        title: 'Hello World!'
-      });
+        var marker = new google.maps.Marker({
+          position: myLatLng,
+          map: map,
+          title: 'Hello World!'
+        });
 
-      document.getElementById("submit").addEventListener("click", function(event) {
-        var lat = document.getElementById("lat").value;
-        var lon = document.getElementById("lon").value;
+        $(document).ready(function(){
+          $("#submit").on("click", function(event) {
+            event.preventDefault();
+            var lat = $("#lat").val();
+            var lon = $("#lon").val();
 
-        marker.setPosition( new google.maps.LatLng( lat, lon ) );
-      });
+            marker.setPosition( new google.maps.LatLng( lat, lon ) );
+          });
 
-      document.getElementById("test").addEventListener("click", function(event) {
-        if(document.getElementById("test").value == "on")
-        {
-          socket.emit("lightoff");
-          document.getElementById("test").value = "off";
-        }
-        else
-        {
-          socket.emit("lighton");
-          document.getElementById("test").value = "on";
-        }
-        
-      });
-    }
+          $("#test").on("click", function(event) {
+            event.preventDefault();
+            if($("#test").val() == "on")
+            {
+              socket.emit("lightoff");
+              $("#test").val("off");
+            }
+            else
+            {
+              socket.emit("lighton");
+              $("#test").val("on");
+            }
+          });
+        });
+      }
+
+    var socket = io();
+
+    socket.on('high', function() {
+      $("#submit").click();
+    });
+
+    socket.on('low', function() {
+      $("#lat").val(-25.363);
+      $("#lon").val(31.044);
+      $("#submit").click();
+    });
+    </script>
+    
+  </head>
+
+  <body>
+    <div class="jumbotron">
+      <div class="container text-center">
+        <h1>CE490GroupB</h1>      
+        <p>HMI</p>
+      </div>
+    </div>
+
+    <nav class="navbar navbar-inverse">
+      <div class="container-fluid">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#myNavbar">
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>                        
+          </button>
+          <a class="navbar-brand" href="#">Arjun Rocks</a>
+        </div>
+        <div class="collapse navbar-collapse" id="myNavbar">
+          <ul class="nav navbar-nav">
+            <li class="active"><a href="#">Map</a></li>
+            <li><a href="#">Data</a></li>
+            <li><a href="#">Config</a></li>
+          </ul>
+        </div>
+      </div>
+    </nav>
+
+    <div class="container">
+      <h2>Options</h2>
+      <form role="form">
+        <div class="form-group">
+          <label>Latitude:</label>
+          <input class="form-control" id="lat" value="-25.363" />
+        </div>
+        <div class="form-group">
+          <label>Longitude:</label>
+          <input class="form-control" id="lon" value="31.044" />
+        </div>
+        <button type="submit" class="btn btn-default" id="submit">Submit</button>
+        <div class="form-group">
+          <label>Light:</label>
+          <input type="submit" class="btn btn-default" id="test" value="on"></input>
+        </div>
+      </form>
+    </div>
+
+      <div id="map" class="embed-responsive-item"></div>
 
     
-    </script>
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCVXj1vRXCYc3VIZtn0QsgcACaIdRhTIyU&callback=initMap"async defer></script>
 
   </body>
-
-  <script>
-  
-  var socket = io();
-
-  socket.on('high', function() {
-    document.getElementById("submit").click();
-  });
-
-  socket.on('low', function() {
-    document.getElementById("lat").value = -25.363;
-    document.getElementById("lon").value = 31.044;
-    document.getElementById("submit").click();
-  });
-  </script>
 </html>

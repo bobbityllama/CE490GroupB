@@ -6,6 +6,7 @@ var serialport = require('serialport');
 var SerialPort = serialport.SerialPort;
 
 app.use(express.static(__dirname + '/app'));
+app.use(express.static(__dirname + '/bower_components'));
 
 var serialport = new SerialPort("COM3", {
   baudrate: 9600,
