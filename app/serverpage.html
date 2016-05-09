@@ -85,6 +85,11 @@
 
     var socket = io();
 
+    socket.on('data', function(data){
+      $("#sensor").html(data.sensor);
+      $("#time").html(data.time);
+    });
+
     </script>
     
   </head>
@@ -116,6 +121,9 @@
         </div>
       </div>
     </nav>
+
+    <div id="sensor">test</div>
+    <div id="time">blah</div>
 
     <div class="container">
       <h2>Options</h2>

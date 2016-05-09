@@ -57,24 +57,32 @@
       function initMap() {
         var myLatLng = {lat: -25.363, lng: 31.044};
 
+        var markers = [];
+
         var map = new google.maps.Map(document.getElementById('map'), {
           zoom: 4,
           center: myLatLng
         });
 
-        var marker = new google.maps.Marker({
-          position: myLatLng,
-          map: map,
-          title: 'Hello World!'
-        });
+
+
+        //var marker = new google.maps.Marker({
+        //  position: myLatLng,
+        //  map: map,
+        //  title: 'Hello World!'
+        //});
 
         $(document).ready(function(){
+          //$("#submit").on("click", function(event) {
+          //  event.preventDefault();
+          //  var lat = $("#lat").val();
+          //  var lon = $("#lon").val();
+          //
+          //  marker.setPosition( new google.maps.LatLng( lat, lon ) );
+          //});
+
           $("#submit").on("click", function(event) {
             event.preventDefault();
-            var lat = $("#lat").val();
-            var lon = $("#lon").val();
-
-            marker.setPosition( new google.maps.LatLng( lat, lon ) );
           });
 
           $("#test").on("click", function(event) {
@@ -91,19 +99,124 @@
             }
           });
         });
+
+        var socket = io();
+
+        socket.emit("init");
+
+        socket.on('high', function() {
+          $("#submit").click();
+        });
+
+        socket.on('low', function() {
+          $("#lat").val(-25.363);
+          $("#lon").val(31.044);
+          $("#submit").click();
+        });
+
+        socket.on('data', function(data){
+          if($("#" + data.id).length == 0)
+          {
+            //doesnt exist
+            $("#sensors").append("<div id=\"" + data.id + "\"class='sensorid'>" + data.id + "</div>");
+            $("#sensors").append("<div id=\"" + data.id + "lat" + "\">" + data.lat + "</div>");
+            $("#sensors").append("<div id=\"" + data.id + "lon" + "\">" + data.lon + "</div>");
+            $("#sensors").append("<div id=\"" + data.id + "time" + "\">" + data.time + "</div>");
+            $("#sensors").append("<div id=\"" + data.id + "epoch" + "\">" + data.epochtime + "</div>");
+            $("#sensors").append("<div id=\"" + data.id + "triggered" + "\">" + data.triggered + "</div>");
+            $("#sensors").append("<div id=\"" + data.id + "prevtrigger" + "\">" + data.previoustriggertime + "</div>");
+            createMarker(data);
+          }
+          else
+          {
+            //exists
+            $("#" + data.id + "lat").html(data.lat);
+            $("#" + data.id + "lon").html(data.lon);
+            $("#" + data.id + "time").html(data.time);
+            $("#" + data.id + "epoch").html(data.epochtime);
+            $("#" + data.id + "triggered").html(data.triggered);
+            $("#" + data.id + "prevtrigger").html(data.previoustriggertime);
+            updateMarker(data);
+
+            $(".sensorid").each(function (index, value){
+              if((Date.now() - $("#" + $(this).attr('id') + "epoch").html()) > 10000)
+              {
+                var currMarker = null;
+                for (var i = 0; i < markers.length; i++) {
+                  if(markers[i].get("id") == $(this).attr('id'))
+                  {
+                    currMarker = markers[i];
+                  }
+                }
+
+                var image = "http://icons.iconarchive.com/icons/paomedia/small-n-flat/1024/map-marker-icon.png";
+
+                currMarker.setIcon(image);
+              }
+            });
+          }
+        });
+
+        function createMarker(data) {
+          var latLng = new google.maps.LatLng(data.lat, data.lon);
+          var marker = new google.maps.Marker({
+            position: latLng,
+            // is map in the global scope?
+            map: map
+          });
+          marker.set("id", data.id);
+
+          var contentString = '<div id="content">'+
+                '<div id="siteNotice">'+
+                '</div>'+
+                '<h1 id="firstHeading" class="firstHeading">' + data.id + '</h1>'+
+                '<div id="bodyContent">'+
+                '<p>lat:' + data.lat + '<br />lon:' + data.lon +'<br />time:' + data.time + '</p>'+
+                '</div>'+
+                '</div>';
+          marker.content = contentString;
+
+          var infowindow = new google.maps.InfoWindow();
+
+          marker.addListener('click', function(){
+            infowindow.setContent(marker.content);
+            infowindow.open(map, marker);
+          });
+
+          markers.push(marker);
+        }
+
+        function updateMarker(data) {
+          var currMarker = null;
+          for (var i = 0; i < markers.length; i++) {
+            if(markers[i].get("id") == data.id)
+            {
+              currMarker = markers[i];
+            }
+          }
+          currMarker.setPosition(new google.maps.LatLng( data.lat, data.lon ));
+
+          var contentString = '<div id="content">'+
+                '<div id="siteNotice">'+
+                '</div>'+
+                '<h1 id="firstHeading" class="firstHeading">' + data.id + '</h1>'+
+                '<div id="bodyContent">'+
+                '<p>lat:' + data.lat + '<br />lon:' + data.lon +'<br />time:' + data.time + '</p>'+
+                '</div>'+
+                '</div>';
+
+          currMarker.content = contentString;
+          var image = 'https://developers.google.com/maps/documentation/javascript/examples/full/images/beachflag.png';
+          if(data.triggered > 0)
+          {
+            currMarker.setIcon(image);
+          }
+          else
+          {
+            currMarker.setIcon(undefined);
+          }
+        }
       }
-
-    var socket = io();
-
-    socket.on('high', function() {
-      $("#submit").click();
-    });
-
-    socket.on('low', function() {
-      $("#lat").val(-25.363);
-      $("#lon").val(31.044);
-      $("#submit").click();
-    });
     </script>
     
   </head>
@@ -135,6 +248,10 @@
         </div>
       </div>
     </nav>
+
+    <div id="sensors">
+      
+    </div>
 
     <div class="container">
       <h2>Options</h2>
