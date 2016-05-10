@@ -121,6 +121,10 @@
           });    
         }, 2000);
 
+        setInterval(function(){ 
+          socket.emit("init");
+        }, 500);
+
         function createMarker(data) {
           var latLng = new google.maps.LatLng(data.lat, data.lon);
           var marker = new google.maps.Marker({
