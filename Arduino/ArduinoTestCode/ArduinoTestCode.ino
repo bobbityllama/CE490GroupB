@@ -47,7 +47,7 @@ void loop() {
     SN4["id"] = "4";
     SN4["lat"] = "43.010201";
     SN4["lon"] = "-83.716633";
-    SN4["time"] = "999";
+    SN4["time"] = "0";
   
     SN4.printTo(Serial);
     Serial.write("\n");

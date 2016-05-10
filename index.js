@@ -91,7 +91,6 @@ var findTriggeredData = function(db) {
       assert.equal(err, null);
       if (doc != null) {
          io.emit('triggereddata', doc);
-         //console.log(doc);
       }
    });
 };
