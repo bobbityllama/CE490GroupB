@@ -6,10 +6,17 @@ var assert = require('assert');
 
 var ObjectId = require('mongodb').ObjectID;
 
+var MongoClient = require('mongodb').MongoClient;
+var assert = require('assert');
+
+var ObjectId = require('mongodb').ObjectID;
+
 app.use(express.static(__dirname + '/remoteapp'));
 app.use(express.static(__dirname + '/bower_components'));
 
 var globalDB;
+
+var router = express.Router();
 
 var url = 'mongodb://54.173.182.65/CE490GroupB';
 MongoClient.connect(url, function(err, db) {
@@ -18,7 +25,7 @@ MongoClient.connect(url, function(err, db) {
 });
 
 app.get('/', function (res) {
-  res.sendfile('/serverpage.html');
+  res.sendFile('/index.html');
 });
 
 io.on('connection', function(socket) {
