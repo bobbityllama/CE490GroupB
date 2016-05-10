@@ -55,107 +55,74 @@
 
     <script>
       function initMap() {
-        var myLatLng = {lat: -25.363, lng: 31.044};
+        var myLatLng = {lat: 43.010201, lng: -83.716633};
 
         var markers = [];
 
         var map = new google.maps.Map(document.getElementById('map'), {
-          zoom: 4,
+          zoom: 17,
           center: myLatLng
-        });
-
-
-
-        //var marker = new google.maps.Marker({
-        //  position: myLatLng,
-        //  map: map,
-        //  title: 'Hello World!'
-        //});
-
-        $(document).ready(function(){
-          //$("#submit").on("click", function(event) {
-          //  event.preventDefault();
-          //  var lat = $("#lat").val();
-          //  var lon = $("#lon").val();
-          //
-          //  marker.setPosition( new google.maps.LatLng( lat, lon ) );
-          //});
-
-          $("#submit").on("click", function(event) {
-            event.preventDefault();
-          });
-
-          $("#test").on("click", function(event) {
-            event.preventDefault();
-            if($("#test").val() == "on")
-            {
-              socket.emit("lightoff");
-              $("#test").val("off");
-            }
-            else
-            {
-              socket.emit("lighton");
-              $("#test").val("on");
-            }
-          });
         });
 
         var socket = io();
 
+        $(document).ready(function(){
+          $("#submit").on("click", function(event) {
+            event.preventDefault();
+            socket.emit('cleardata');
+          });
+        });
+
         socket.emit("init");
-
-        socket.on('high', function() {
-          $("#submit").click();
-        });
-
-        socket.on('low', function() {
-          $("#lat").val(-25.363);
-          $("#lon").val(31.044);
-          $("#submit").click();
-        });
 
         socket.on('data', function(data){
           if($("#" + data.id).length == 0)
           {
             //doesnt exist
-            $("#sensors").append("<div id=\"" + data.id + "\"class='sensorid'>" + data.id + "</div>");
-            $("#sensors").append("<div id=\"" + data.id + "lat" + "\">" + data.lat + "</div>");
-            $("#sensors").append("<div id=\"" + data.id + "lon" + "\">" + data.lon + "</div>");
-            $("#sensors").append("<div id=\"" + data.id + "time" + "\">" + data.time + "</div>");
-            $("#sensors").append("<div id=\"" + data.id + "epoch" + "\">" + data.epochtime + "</div>");
-            $("#sensors").append("<div id=\"" + data.id + "triggered" + "\">" + data.triggered + "</div>");
-            $("#sensors").append("<div id=\"" + data.id + "prevtrigger" + "\">" + data.previoustriggertime + "</div>");
+            $("#sensors").append("<div id=\"" + data.id + "\"class='sensorid' data-id='" + data.id + "'></div>");
+            $("#sensors").append("<div id=\"" + data.id + "lat" + "\" data-lat='" + data.lat + "'></div>");
+            $("#sensors").append("<div id=\"" + data.id + "lon" + "\" data-lon='" + data.lon + "'></div>");
+            $("#sensors").append("<div id=\"" + data.id + "time" + "\" data-time='" + data.time + "'></div>");
+            $("#sensors").append("<div id=\"" + data.id + "epoch" + "\" data-epoch='" + data.epochtime + "'></div>");
+            $("#sensors").append("<div id=\"" + data.id + "triggered" + "\" data-triggered='" + data.triggered + "'></div>");
+            $("#sensors").append("<div id=\"" + data.id + "prevtrigger" + "\" data-prevtrigger='" + data.previoustriggertime + "'></div>");
             createMarker(data);
           }
           else
           {
             //exists
-            $("#" + data.id + "lat").html(data.lat);
-            $("#" + data.id + "lon").html(data.lon);
-            $("#" + data.id + "time").html(data.time);
-            $("#" + data.id + "epoch").html(data.epochtime);
-            $("#" + data.id + "triggered").html(data.triggered);
-            $("#" + data.id + "prevtrigger").html(data.previoustriggertime);
+            $("#" + data.id + "lat").attr("data-lat", data.lat);
+            $("#" + data.id + "lon").attr("data-lon", data.lon);
+            $("#" + data.id + "time").attr("data-time", data.time);
+            $("#" + data.id + "epoch").attr("data-epoch", data.epochtime);
+            $("#" + data.id + "triggered").attr("data-triggered", data.triggered);
+            $("#" + data.id + "prevtrigger").attr("data-prevtrigger", data.previoustriggertime);
             updateMarker(data);
-
-            $(".sensorid").each(function (index, value){
-              if((Date.now() - $("#" + $(this).attr('id') + "epoch").html()) > 10000)
-              {
-                var currMarker = null;
-                for (var i = 0; i < markers.length; i++) {
-                  if(markers[i].get("id") == $(this).attr('id'))
-                  {
-                    currMarker = markers[i];
-                  }
-                }
-
-                var image = "http://icons.iconarchive.com/icons/paomedia/small-n-flat/1024/map-marker-icon.png";
-
-                currMarker.setIcon(image);
-              }
-            });
           }
         });
+
+        socket.on('triggereddata', function(data){
+          $("#triggertablebody").append("<tr><td>" + data.id + "</td><td>" + data.lat + "</td><td>" + data.lon + "</td><td>" + data.epochtime + "</td></tr>")
+        });
+
+        setInterval(function(){ 
+          $(".sensorid").each(function (index, value){
+            if((Date.now() - $("#" + $(this).attr('id') + "epoch").attr("data-epoch")) > 10000)
+            {
+              var currMarker = null;
+              for (var i = 0; i < markers.length; i++) {
+                if(markers[i].get("id") == $(this).attr('id'))
+                {
+                  currMarker = markers[i];
+                }
+              }
+
+              var image = "http://www2.psd100.com/icon/2013/08/2001/Skull-small-icon-0820142635.png";
+
+              currMarker.setIcon(image);
+            }
+          });    
+        }, 2000);
 
         function createMarker(data) {
           var latLng = new google.maps.LatLng(data.lat, data.lon);
@@ -224,7 +191,7 @@
   <body>
     <div class="jumbotron">
       <div class="container text-center">
-        <h1>CE490GroupB</h1>      
+        <h1>CE490GroupB: Local</h1>      
         <p>HMI</p>
       </div>
     </div>
@@ -257,24 +224,26 @@
       <h2>Options</h2>
       <form role="form">
         <div class="form-group">
-          <label>Latitude:</label>
-          <input class="form-control" id="lat" value="-25.363" />
-        </div>
-        <div class="form-group">
-          <label>Longitude:</label>
-          <input class="form-control" id="lon" value="31.044" />
-        </div>
-        <button type="submit" class="btn btn-default" id="submit">Submit</button>
-        <div class="form-group">
-          <label>Light:</label>
-          <input type="submit" class="btn btn-default" id="test" value="on"></input>
+          <label>Clear Data:</label>
+          <button type="submit" class="btn btn-default" id="submit">Submit</button>
         </div>
       </form>
     </div>
 
+    <table id="triggertable" class="table table-striped">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Lat</th>
+          <th>Lng</th>
+          <th>Time</th>
+        </tr>
+      </thead>
+      <tbody id="triggertablebody">
+
+      </tbody>
+    </table>
+
       <div id="map" class="embed-responsive-item"></div>
-
-    
-
   </body>
 </html>
