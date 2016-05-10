@@ -6,7 +6,7 @@ var assert = require('assert');
 
 var ObjectId = require('mongodb').ObjectID;
 
-app.use(express.static(__dirname + '/app'));
+app.use(express.static(__dirname + '/remoteapp'));
 app.use(express.static(__dirname + '/bower_components'));
 
 var globalDB;
