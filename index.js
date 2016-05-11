@@ -28,6 +28,9 @@ app.get('/', function (res) {
 });
 
 var globalDB;
+var deathTime = 10000;
+var triggerTime = 5000;
+var beaconPeriod = 1000;
 
 var url = 'mongodb://54.173.182.65/CE490GroupB';
 MongoClient.connect(url, function(err, db) {
@@ -41,58 +44,179 @@ serialport.on('open', function(){
     
     try{
       obj = JSON.parse(data);
-      obj.epochtime = Date.now();
-      obj.triggered = 0;
     }
     catch(e)
     {
       obj = null;
     }
+
     if(obj != null && globalDB != undefined){
+      obj.epochtime = Date.now();
+      obj.triggered = 0;
+      obj.alive = 1;
+      obj.previoustriggeredtime = 0;
+
       insertNodeData(globalDB, obj);
       updateNodeData(globalDB, obj);
     }
-    
   });
 
   io.on('connection', function(socket) {
-    socket.on("init", function() {
-      findData(globalDB);
-      findTriggeredData(globalDB);
+    socket.on("getdata", function() {
+      if(globalDB != null)
+      {
+        findData(globalDB);
+      }
     });
+
+    socket.on("gettriggereddata", function() {
+      if(globalDB != null)
+      {
+        findTriggeredData(globalDB);
+      }
+    });
+
     socket.on("cleardata", function() {
-      globalDB.collection('TriggeredData').remove();
+      if(globalDB != null)
+      {
+        globalDB.collection('NodeData').remove();
+      }
+    });
+
+    socket.on("cleartriggereddata", function() {
+      if(globalDB != null)
+      {
+        globalDB.collection('TriggeredData').remove();
+      }
+    });
+
+    socket.on("clearsingledata", function() {
+      if(globalDB != null)
+      {
+        globalDB.collection('SingleNodeData').remove();
+      }
+    });
+
+    socket.on("triggertimesubmit", function(data) {
+      if(globalDB != null)
+      {
+        globalDB.collection('ConfigData').findOne({"name":"TriggerTime"}, function(err, user){
+          if(user)
+          {
+            globalDB.collection('ConfigData').updateOne(
+              {"name":"TriggerTime"},
+              {$set:{"value":data}}
+            );
+          }
+          else
+          {
+            var configData = {"name":"TriggerTime", "value":data};
+
+            globalDB.collection('ConfigData').insertOne( configData, function(err, result) {
+              assert.equal(err, null);
+            });
+          }
+        });
+      }
+    });
+
+    socket.on("sensordeathtimesubmit", function(data) {
+      if(globalDB != null)
+      {
+        globalDB.collection('ConfigData').findOne({"name":"SensorDeathTime"}, function(err, user){
+          if(user)
+          {
+            globalDB.collection('ConfigData').updateOne(
+              {"name":"SensorDeathTime"},
+              {$set:{"value":data}}
+            );
+          }
+          else
+          {
+            var configData = {"name":"SensorDeathTime", "value":data};
+
+            globalDB.collection('ConfigData').insertOne( configData, function(err, result) {
+              assert.equal(err, null);
+            });
+          }
+        });
+      }
+    });
+
+    socket.on("beaconperiodsubmit", function(data) {
+      if(globalDB != null)
+      {
+        globalDB.collection('ConfigData').findOne({"name":"BeaconPeriod"}, function(err, user){
+          if(user)
+          {
+            globalDB.collection('ConfigData').updateOne(
+              {"name":"BeaconPeriod"},
+              {$set:{"value":data}}
+            );
+          }
+          else
+          {
+            var configData = {"name":"BeaconPeriod", "value":data};
+
+            globalDB.collection('ConfigData').insertOne( configData, function(err, result) {
+              assert.equal(err, null);
+            });
+          }
+        });
+      }
+
+      socket.write("{\"beaconperiod\":\"" + data + "\"}");
     });
   });
 });
 
+setInterval(function(){
+  if(globalDB != undefined)
+  {
+    var SDTcursor = globalDB.collection('ConfigData').find({"name":"SensorDeathTime"});
+    SDTcursor.each(function(err, doc){
+      if(doc != null){
+        deathTime = doc.value;
+        io.emit('deathTimeUpdate', deathTime);
+      }
+    });
 
+    var TTcursor = globalDB.collection('ConfigData').find({"name":"TriggerTime"});
+    TTcursor.each(function(err, doc){
+      if(doc != null){
+        triggerTime = doc.value;
+        io.emit('triggerTimeUpdate', triggerTime);
+      }
+    });
+
+    var BPcursor = globalDB.collection('ConfigData').find({"name":"BeaconPeriod"});
+    BPcursor.each(function(err, doc){
+      if(doc != null){
+        beaconPeriod = doc.value;
+        io.emit('beaconPeriodUpdate', beaconPeriod);
+      }
+    });
+
+    var cursor = globalDB.collection('SingleNodeData').find( );
+    cursor.each(function(err, doc) {
+      assert.equal(err, null);
+      if (doc != null) {
+        if((Date.now() - doc.epochtime) > deathTime)
+        {
+          globalDB.collection('SingleNodeData').updateOne(
+            {"id":doc.id},
+            {$set:{"alive": 0}}
+          );
+        }
+      }
+    });
+  }
+}, 250);
 
 var insertNodeData = function(db, nodedata) {
    db.collection('NodeData').insertOne( nodedata, function(err, result) {
     assert.equal(err, null);
   });
-};
-
-
-var findData = function(db) {
-   var cursor =db.collection('SingleNodeData').find( );
-   cursor.each(function(err, doc) {
-      assert.equal(err, null);
-      if (doc != null) {
-         io.emit('data', doc);
-      }
-   });
-};
-
-var findTriggeredData = function(db) {
-   var cursor =db.collection('TriggeredData').find( );
-   cursor.each(function(err, doc) {
-      assert.equal(err, null);
-      if (doc != null) {
-         io.emit('triggereddata', doc);
-      }
-   });
 };
 
 var updateNodeData = function(db, nodedata) {
@@ -105,27 +229,25 @@ var updateNodeData = function(db, nodedata) {
         nodedata.triggered = 1;
         nodedata.previoustriggeredtime = nodedata.epochtime;
         insertTriggeredData(globalDB, nodedata);
-        io.emit('triggereddata', nodedata);
       }
-      else if((Date.now() - user.previoustriggeredtime) < 5000)
+      else if((Date.now() - user.previoustriggeredtime) < triggerTime)
       {
         nodedata.triggered = 1;
         nodedata.previoustriggeredtime = user.previoustriggeredtime;
       }
-
-      // put in "does not exist" condition as well
-      io.emit('data', nodedata);
 
       db.collection('SingleNodeData').updateOne(
         {"id":nodedata.id},
         {
           $set: 
           {
-            "epochtime":nodedata.epochtime,
+            "sec":nodedata.sec,
             "lat": nodedata.lat,
-            "lon": nodedata.lon,
+            "lng": nodedata.lng,
             "time": nodedata.time,
+            "epochtime": nodedata.epochtime,
             "triggered": nodedata.triggered,
+            "alive": nodedata.alive,
             "previoustriggeredtime": nodedata.previoustriggeredtime
           }
       });
@@ -144,4 +266,24 @@ var insertTriggeredData = function(db, nodedata) {
    db.collection('TriggeredData').insertOne( nodedata, function(err, result) {
     assert.equal(err, null);
   });
+};
+
+var findData = function(db) {
+   var cursor = db.collection('SingleNodeData').find( );
+   cursor.each(function(err, doc) {
+      assert.equal(err, null);
+      if (doc != null) {
+         io.emit('data', doc);
+      }
+   });
+};
+
+var findTriggeredData = function(db) {
+   var cursor =db.collection('TriggeredData').find( );
+   cursor.each(function(err, doc) {
+      assert.equal(err, null);
+      if (doc != null) {
+         io.emit('triggereddata', doc);
+      }
+   });
 };

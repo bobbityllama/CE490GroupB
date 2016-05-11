@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>CE490GroupB: Data</title>
+
+    <script src='/socket.io/socket.io.js'></script>
+    <meta charset="utf-8">
+
+    <link href="/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/bootstrap/dist/css/bootstrap-theme.min.css" rel="stylesheet">
+    <script src="/jquery/dist/jquery.min.js"></script>
+    <script src="/bootstrap/dist/js/bootstrap.min.js"></script>
+
+    <style>
+      html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+      }
+
+      /* Remove the navbar's default rounded borders and increase the bottom margin */ 
+      .navbar {
+        margin-bottom: 10px;
+        border-radius: 0;
+      }
+      
+      /* Remove the jumbotron's default bottom margin */ 
+       .jumbotron {
+        margin-bottom: 0;
+        padding-bottom: 10px;
+        padding-top: 10px;
+      }
+     
+      /* Add a gray background color and some padding to the footer */
+      footer {
+      background-color: #f2f2f2;
+        padding: 25px;
+      }
+    </style>
+
+    <script>
+      var socket = io();
+
+      $(document).ready(function(){
+        setInterval(function(){
+          socket.emit("gettriggereddata");
+        }, 250);
+
+        socket.on('triggereddata', function(data){
+          if($("#" + data.epochtime + "-trigger-time").length == 0)
+          {
+            var utcSeconds = data.epochtime;
+            var triggerDate = new Date(0);
+            triggerDate.setUTCSeconds(utcSeconds/1000);
+
+            $("#triggertablebody").append("<tr id='"+ data.epochtime +"-trigger-time'><td>" + data.id + "</td><td>" + data.sec + "</td><td>" + data.lat + "</td><td>" + data.lng + "</td><td>" + triggerDate + "</td></tr>");
+          }
+        });
+      });
+    </script>
+    
+  </head>
+
+  <body>
+    <div class="jumbotron">
+      <div class="container text-center">
+        <h1>CE490GroupB: Local</h1>
+        <p>HMI</p>
+      </div>
+    </div>
+
+    <nav class="navbar navbar-inverse">
+      <div class="container-fluid">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#myNavbar">
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>                        
+          </button>
+          <a class="navbar-brand" href="#">Arjun Rocks</a>
+        </div>
+        <div class="collapse navbar-collapse" id="myNavbar">
+          <ul class="nav navbar-nav">
+            <li><a href="/index.html">Map</a></li>
+            <li class="active"><a href="#">Data</a></li>
+            <li><a href="/config.html">Config</a></li>
+          </ul>
+        </div>
+      </div>
+    </nav>
+
+    <table id="triggertable" class="table table-striped">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Sec</th>
+          <th>Lat</th>
+          <th>Lng</th>
+          <th>Time</th>
+        </tr>
+      </thead>
+      <tbody id="triggertablebody">
+
+      </tbody>
+    </table>
+  </body>
+</html>

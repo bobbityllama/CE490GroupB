@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>CE490GroupB: Config</title>
+
+    <script src='/socket.io/socket.io.js'></script>
+    <meta charset="utf-8">
+
+    <link href="/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/bootstrap/dist/css/bootstrap-theme.min.css" rel="stylesheet">
+    <script src="/jquery/dist/jquery.min.js"></script>
+    <script src="/bootstrap/dist/js/bootstrap.min.js"></script>
+
+    <style>
+      html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+      }
+
+      /* Remove the navbar's default rounded borders and increase the bottom margin */ 
+      .navbar {
+        margin-bottom: 10px;
+        border-radius: 0;
+      }
+      
+      /* Remove the jumbotron's default bottom margin */ 
+       .jumbotron {
+        margin-bottom: 0;
+        padding-bottom: 10px;
+        padding-top: 10px;
+      }
+     
+      /* Add a gray background color and some padding to the footer */
+      footer {
+      background-color: #f2f2f2;
+        padding: 25px;
+      }
+    </style>
+
+    <script>
+      var socket = io();
+
+      $(document).ready(function(){
+        $("#cleardata").on("click", function(event) {
+          event.preventDefault();
+          socket.emit('cleardata');
+        });
+
+        $("#clearsingledata").on("click", function(event) {
+          event.preventDefault();
+          socket.emit('clearsingledata');
+        });
+
+        $("#cleartriggereddata").on("click", function(event) {
+          event.preventDefault();
+          socket.emit('cleartriggereddata');
+        });
+
+        $("#trigger-time-submit").on("click", function(event) {
+          event.preventDefault();
+          socket.emit('triggertimesubmit', $("#trigger-time").val());
+        });
+
+        $("#sensor-death-time-submit").on("click", function(event) {
+          event.preventDefault();
+          socket.emit('sensordeathtimesubmit', $("#sensor-death-time").val());
+        });
+
+        $("#beacon-period-submit").on("click", function(event) {
+          event.preventDefault();
+          socket.emit('beaconperiodsubmit', $("#beacon-period").val());
+        });
+
+        socket.on('deathTimeUpdate', function(data){
+          $("#sensor-death-time-label").html("Sensor Death Time (ms) (Current: " + data + "):")
+        });
+
+        socket.on('triggerTimeUpdate', function(data){
+          $("#trigger-time-label").html("Trigger Time (ms) (Current: " + data + "):")
+        });
+
+        socket.on('beaconPeriodUpdate', function(data){
+          $("#beacon-period-label").html("Beacon Period (ms) (Current: " + data + "):")
+        });
+      });
+    </script>
+    
+  </head>
+
+  <body>
+    <div class="jumbotron">
+      <div class="container text-center">
+        <h1>CE490GroupB: Local</h1>
+        <p>HMI</p>
+      </div>
+    </div>
+
+    <nav class="navbar navbar-inverse">
+      <div class="container-fluid">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#myNavbar">
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>                        
+          </button>
+          <a class="navbar-brand" href="#">Arjun Rocks</a>
+        </div>
+        <div class="collapse navbar-collapse" id="myNavbar">
+          <ul class="nav navbar-nav">
+            <li><a href="/index.html">Map</a></li>
+            <li><a href="/data.html">Data</a></li>
+            <li class="active"><a href="#">Config</a></li>
+          </ul>
+        </div>
+      </div>
+    </nav>
+
+    <div class="container">
+      <h2>Options</h2>
+      <form role="form">
+        <div class="form-group">
+          <button type="submit" class="btn btn-default" id="cleardata">Clear Data</button>
+          <button type="submit" class="btn btn-default" id="clearsingledata">Clear Single Data</button>
+          <button type="submit" class="btn btn-default" id="cleartriggereddata">Clear Triggered Data</button>
+        </div>
+        <div class="form-group">
+          <label id="trigger-time-label">Trigger Time (ms):</label>
+          <input class="form-control" id="trigger-time" placeholder="Enter Trigger Time"></input>
+          <button type="submit" class="btn btn-default" id="trigger-time-submit">Submit</button>
+        </div>
+        <div class="form-group">
+          <label id="sensor-death-time-label">Sensor Death Time (ms):</label>
+          <input class="form-control" id="sensor-death-time" placeholder="Enter Sensor Death Time"></input>
+          <button type="submit" class="btn btn-default" id="sensor-death-time-submit">Submit</button>
+        </div>
+        <div class="form-group">
+          <label id="beacon-period-label">Beacon Period (ms):</label>
+          <input class="form-control" id="beacon-period" placeholder="Enter Beacon Period Time"></input>
+          <button type="submit" class="btn btn-default" id="beacon-period-submit">Submit</button>
+        </div>
+      </form>
+    </div>
+
+      </tbody>
+    </table>
+  </body>
+</html>
