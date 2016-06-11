@@ -38,6 +38,13 @@ io.on('connection', function(socket) {
       findTriggeredData(globalDB);
     }
   });
+
+    socket.on("getheaddata", function() {
+      if(globalDB != null)
+      {
+        findHeadData(globalDB);
+      }
+    });
 });
 
 var findData = function(db) {
@@ -56,6 +63,16 @@ var findTriggeredData = function(db) {
       assert.equal(err, null);
       if (doc != null) {
          io.emit('triggereddata', doc);
+      }
+   });
+};
+
+var findHeadData = function(db) {
+   var cursor = db.collection('SingleHeadData').find( );
+   cursor.each(function(err, doc) {
+      assert.equal(err, null);
+      if (doc != null) {
+         io.emit('headdata', doc);
       }
    });
 };

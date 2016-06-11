@@ -15,7 +15,7 @@ app.use(express.static(__dirname + '/bower_components'));
 
 var router = express.Router();
 
-var serialport = new SerialPort("COM3", {
+var serialport = new SerialPort("COM4", {
   baudrate: 9600,
   dataBits: 8,
   parity: 'none',
@@ -41,6 +41,7 @@ MongoClient.connect(url, function(err, db) {
 serialport.on('open', function(){
   serialport.on('data', function(data){
     var obj;
+    console.log(data);
     
     try{
       obj = JSON.parse(data);
@@ -51,13 +52,29 @@ serialport.on('open', function(){
     }
 
     if(obj != null && globalDB != undefined){
-      obj.epochtime = Date.now();
-      obj.triggered = 0;
-      obj.alive = 1;
-      obj.previoustriggeredtime = 0;
+      obj.sec = obj.sectorID;
+      obj.id = obj.deviceID + obj.sectorID;
 
-      insertNodeData(globalDB, obj);
-      updateNodeData(globalDB, obj);
+      if(obj.lat == 0)
+      {
+        obj.epochtime = Date.now();
+        obj.alive = 1;
+
+        insertHeadData(globalDB, obj);
+        updateHeadData(globalDB, obj);
+      }
+      else
+      {
+        obj.epochtime = Date.now();
+        obj.triggered = 0;
+        obj.alive = 1;
+        obj.previoustriggeredtime = 0;
+
+        insertNodeData(globalDB, obj);
+        updateNodeData(globalDB, obj);
+      }
+
+      console.log(obj);
     }
   });
 
@@ -76,10 +93,18 @@ serialport.on('open', function(){
       }
     });
 
+    socket.on("getheaddata", function() {
+      if(globalDB != null)
+      {
+        findHeadData(globalDB);
+      }
+    });
+
     socket.on("cleardata", function() {
       if(globalDB != null)
       {
         globalDB.collection('NodeData').remove();
+        globalDB.collection('HeadData').remove();
       }
     });
 
@@ -94,6 +119,7 @@ serialport.on('open', function(){
       if(globalDB != null)
       {
         globalDB.collection('SingleNodeData').remove();
+        globalDB.collection('SingleHeadData').remove();
       }
     });
 
@@ -197,13 +223,29 @@ setInterval(function(){
       }
     });
 
-    var cursor = globalDB.collection('SingleNodeData').find( );
-    cursor.each(function(err, doc) {
+    var nodeCursor = globalDB.collection('SingleNodeData').find( );
+    nodeCursor.each(function(err, doc) {
       assert.equal(err, null);
       if (doc != null) {
         if((Date.now() - doc.epochtime) > deathTime)
         {
+          //console.log(Date.now()+" - "+doc.epochtime+"="+(Date.now() - doc.epochtime));
           globalDB.collection('SingleNodeData').updateOne(
+            {"id":doc.id},
+            {$set:{"alive": 0}}
+          );
+        }
+      }
+    });
+
+    var headCursor = globalDB.collection('SingleHeadData').find( );
+    headCursor.each(function(err, doc) {
+      assert.equal(err, null);
+      if (doc != null) {
+        if((Date.now() - doc.epochtime) > deathTime)
+        {
+          //console.log(Date.now()+" - "+doc.epochtime+"="+(Date.now() - doc.epochtime));
+          globalDB.collection('SingleHeadData').updateOne(
             {"id":doc.id},
             {$set:{"alive": 0}}
           );
@@ -215,6 +257,12 @@ setInterval(function(){
 
 var insertNodeData = function(db, nodedata) {
    db.collection('NodeData').insertOne( nodedata, function(err, result) {
+    assert.equal(err, null);
+  });
+};
+
+var insertHeadData = function(db, headdata) {
+   db.collection('HeadData').insertOne( headdata, function(err, result) {
     assert.equal(err, null);
   });
 };
@@ -262,6 +310,32 @@ var updateNodeData = function(db, nodedata) {
   });
 };
 
+var updateHeadData = function(db, headdata) {
+  db.collection('SingleHeadData').findOne({"id":headdata.id}, function(err, user){
+    if(user)
+    {
+      //exists
+      db.collection('SingleHeadData').updateOne(
+        {"id":headdata.id},
+        {
+          $set:
+          {
+            "sec":headdata.sec,
+            "epochtime": headdata.epochtime,
+            "alive": headdata.alive
+          }
+      });
+    }
+    else
+    {
+      //does not exist
+      db.collection('SingleHeadData').insertOne( headdata, function(err, result) {
+        assert.equal(err, null);
+      });
+    }
+  });
+};
+
 var insertTriggeredData = function(db, nodedata) {
    db.collection('TriggeredData').insertOne( nodedata, function(err, result) {
     assert.equal(err, null);
@@ -279,11 +353,21 @@ var findData = function(db) {
 };
 
 var findTriggeredData = function(db) {
-   var cursor =db.collection('TriggeredData').find( );
+   var cursor = db.collection('TriggeredData').find( );
    cursor.each(function(err, doc) {
       assert.equal(err, null);
       if (doc != null) {
          io.emit('triggereddata', doc);
+      }
+   });
+};
+
+var findHeadData = function(db) {
+   var cursor = db.collection('SingleHeadData').find( );
+   cursor.each(function(err, doc) {
+      assert.equal(err, null);
+      if (doc != null) {
+         io.emit('headdata', doc);
       }
    });
 };
