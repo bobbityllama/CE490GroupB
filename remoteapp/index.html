@@ -69,12 +69,17 @@
           socket.on('data', function(data){
             var alive = data.alive ? "Yes" : "No";
             var triggered = data.triggered > 0 ? "Yes" : "No";
+
+            var utcSeconds = data.epochtime;
+            var triggerDate = new Date(0);
+            triggerDate.setUTCSeconds(utcSeconds/1000);
+
             var contentString = '<div id="content">'+
               '<div id="siteNotice">'+
               '</div>'+
               '<h1 id="firstHeading" class="firstHeading">Sensor Node</h1>'+
               '<div id="bodyContent">'+
-              '<p>ID: ' + data.id + '<br />Sec: ' + data.sec + '<br />Lat: ' + data.lat + '<br />Lng: ' + data.lng +'<br />Alive: ' + alive +'<br />Triggered: ' + triggered + '</p>'+
+              '<p>ID: ' + data.id + '<br />Sec: ' + data.sec + '<br />Lat: ' + data.lat + '<br />Lng: ' + data.lng +'<br />Alive: ' + alive +'<br />Triggered: ' + triggered + '<br />Time: ' + triggerDate +'</p>'+
               '</div>'+
               '</div>';
 

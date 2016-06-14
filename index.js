@@ -15,7 +15,7 @@ app.use(express.static(__dirname + '/bower_components'));
 
 var router = express.Router();
 
-var serialport = new SerialPort("COM4", {
+var serialport = new SerialPort("COM5", {
   baudrate: 9600,
   dataBits: 8,
   parity: 'none',
@@ -38,6 +38,10 @@ MongoClient.connect(url, function(err, db) {
   globalDB = db;
 });
 
+serialport.on('disconnect', function(){
+  io.emit("serialdisconnect");
+});
+
 serialport.on('open', function(){
   serialport.on('data', function(data){
     var obj;
@@ -53,12 +57,14 @@ serialport.on('open', function(){
 
     if(obj != null && globalDB != undefined){
       obj.sec = obj.sectorID;
-      obj.id = obj.deviceID + obj.sectorID;
+      obj.id = obj.deviceID.toString() + obj.sectorID.toString();
 
       if(obj.lat == 0)
       {
         obj.epochtime = Date.now();
         obj.alive = 1;
+
+        console.log("devbug");
 
         insertHeadData(globalDB, obj);
         updateHeadData(globalDB, obj);
@@ -235,6 +241,13 @@ setInterval(function(){
             {$set:{"alive": 0}}
           );
         }
+        else
+        {
+          globalDB.collection('SingleHeadData').updateOne(
+            {"id":doc.id},
+            {$set:{"alive": 1}}
+          );
+        }
       }
     });
 
@@ -248,6 +261,13 @@ setInterval(function(){
           globalDB.collection('SingleHeadData').updateOne(
             {"id":doc.id},
             {$set:{"alive": 0}}
+          );
+        }
+        else
+        {
+          globalDB.collection('SingleHeadData').updateOne(
+            {"id":doc.id},
+            {$set:{"alive": 1}}
           );
         }
       }
@@ -268,46 +288,59 @@ var insertHeadData = function(db, headdata) {
 };
 
 var updateNodeData = function(db, nodedata) {
-  db.collection('SingleNodeData').findOne({"id":nodedata.id}, function(err, user){
-    if(user)
-    {
-      //exists
-      if(nodedata.time > 0)
+  var timeOutTime = 0;
+  if(nodedata.time > 0)
+  {
+    timeOutTime = 1000;
+  }
+  setTimeout(function(){
+    console.log("updatenodedata");
+    db.collection('SingleNodeData').findOne({"id":nodedata.id}, function(err, user){
+      console.log("user: " + user);
+      if(user)
       {
-        nodedata.triggered = 1;
-        nodedata.previoustriggeredtime = nodedata.epochtime;
-        insertTriggeredData(globalDB, nodedata);
-      }
-      else if((Date.now() - user.previoustriggeredtime) < triggerTime)
-      {
-        nodedata.triggered = 1;
-        nodedata.previoustriggeredtime = user.previoustriggeredtime;
-      }
-
-      db.collection('SingleNodeData').updateOne(
-        {"id":nodedata.id},
+        console.log("nodedata "+((Date.now() - user.previoustriggeredtime) < triggerTime));
+        //exists
+        if(nodedata.time > 0)
         {
-          $set: 
+          nodedata.triggered = 1;
+          nodedata.previoustriggeredtime = nodedata.epochtime;
+          insertTriggeredData(globalDB, nodedata);
+        }
+        else if((Date.now() - user.previoustriggeredtime) < triggerTime)
+        {
+          nodedata.triggered = 1;
+          nodedata.previoustriggeredtime = user.previoustriggeredtime;
+        }
+
+        db.collection('SingleNodeData').updateOne(
+          {"id":nodedata.id},
           {
-            "sec":nodedata.sec,
-            "lat": nodedata.lat,
-            "lng": nodedata.lng,
-            "time": nodedata.time,
-            "epochtime": nodedata.epochtime,
-            "triggered": nodedata.triggered,
-            "alive": nodedata.alive,
-            "previoustriggeredtime": nodedata.previoustriggeredtime
-          }
-      });
-    }
-    else
-    {
-      //does not exist
-      db.collection('SingleNodeData').insertOne( nodedata, function(err, result) {
-        assert.equal(err, null);
-      });
-    }
-  });
+            $set: 
+            {
+              "sec":nodedata.sec,
+              "lat": nodedata.lat,
+              "lng": nodedata.lng,
+              "time": nodedata.time,
+              "epochtime": nodedata.epochtime,
+              "triggered": nodedata.triggered,
+              "alive": nodedata.alive,
+              "previoustriggeredtime": nodedata.previoustriggeredtime
+            }
+        });
+
+        console.log("epochtime " + nodedata.epochtime + " ||| triggered " + nodedata.triggered);
+      }
+      else
+      {
+        //does not exist
+        console.log("creating");
+        db.collection('SingleNodeData').insertOne( nodedata, function(err, result) {
+          assert.equal(err, null);
+        });
+      }
+    });
+  }, timeOutTime);
 };
 
 var updateHeadData = function(db, headdata) {
@@ -371,3 +404,7 @@ var findHeadData = function(db) {
       }
    });
 };
+
+process.on('SIGNINT', function(){
+  globalDB.close();
+});
